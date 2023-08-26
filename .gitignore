@@ -1,0 +1,6 @@
+bin/
+obj/
+.vs/
+.idea/
+googleapi.txt
+discordtoken.txt

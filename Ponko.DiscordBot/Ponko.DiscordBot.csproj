@@ -1,0 +1,41 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+    <PropertyGroup>
+        <TargetFramework>net7.0</TargetFramework>
+        <ImplicitUsings>enable</ImplicitUsings>
+        <Nullable>enable</Nullable>
+    </PropertyGroup>
+
+    <ItemGroup>
+      <PackageReference Include="Autofac" Version="7.1.0" />
+      <PackageReference Include="Discord.Net.Core" Version="3.12.0" />
+      <PackageReference Include="Discord.Net.WebSocket" Version="3.12.0" />
+      <PackageReference Include="NAudio" Version="2.1.0" />
+    </ItemGroup>
+
+    <ItemGroup>
+      <ProjectReference Include="..\..\Ponko\Ponko.HtmlExtensions\Ponko.HtmlExtensions.csproj" />
+      <ProjectReference Include="..\..\Ponko\Ponko.MediaLib\Ponko.MediaLib.csproj" />
+      <ProjectReference Include="..\..\Ponko\Ponko.MusicFinder\Ponko.MusicFinder.csproj" />
+      <ProjectReference Include="..\..\Ponko\Ponko.SoundCloud\Ponko.SoundCloud.csproj" />
+      <ProjectReference Include="..\..\Ponko\Ponko.Util\Ponko.Util.csproj" />
+      <ProjectReference Include="..\..\Ponko\Ponko.YoutubeApi\Ponko.YoutubeApi.csproj" />
+      <ProjectReference Include="..\..\Ponko\Ponko.YT\Ponko.YT.csproj" />
+    </ItemGroup>
+
+    <ItemGroup>
+      <None Update="googleapi.txt">
+        <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+      </None>
+      <None Update="libopus.dll">
+        <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+      </None>
+      <None Update="libsodium.dll">
+        <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+      </None>
+      <None Update="opus.dll">
+        <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+      </None>
+    </ItemGroup>
+
+</Project>
