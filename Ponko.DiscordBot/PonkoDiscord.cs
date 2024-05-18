@@ -1,147 +1,239 @@
-using Discord;
-using Discord.Audio;
-using Discord.WebSocket;
-using NAudio.Wave;
-using Ponko.DiscordBot.Models;
-using Ponko.DiscordBot.Repositories;
+using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Hosting;
+using Ponko.DiscordBot.Commands;
+using Ponko.DiscordBot.Common;
+using Ponko.MediaLib;
+using Ponko.MusicFinder;
 using Ponko.YT;
+using System.Reflection;
 
 namespace Ponko.DiscordBot;
 
+public class GuildService<T> where T : class
+{
+    public T this[Guild guild] => Get(guild);
+    public T Get(Guild guild)
+    {
+        var svc = PonkoDiscordHost._guildServices.Get<T>(guild);
+        return svc;
+    }
+}
+
+public class CommandHost
+{
+    public Type CommandType { get; set; }
+    public HashSet<string> Triggers { get; set; }
+}
+
+public class CommandFactory
+{
+    private readonly Dictionary<Guild, CommandHost> _commands = new();
+    private readonly List<CommandHost> _hosts = new();
+
+    public void Register<TImpl>(IEnumerable<string> triggers) where TImpl : class
+    {
+        _hosts.Add(new CommandHost { CommandType = typeof(TImpl), Triggers = triggers.ToHashSet() });
+    }
+
+    public IChatCommand GetCommand(Guild guild, string trigger)
+    {
+        for (int i = 0; i < _hosts.Count; i++)
+        {
+            var h = _hosts[i];
+            foreach (var t in h.Triggers)
+            {
+                if (h.Triggers.Contains(trigger))
+                {
+                    var cmd = PonkoDiscord.AppHost.Services.GetRequiredService(h.CommandType) as IChatCommand;
+                    cmd.Guild = guild;
+                    return cmd;
+                }
+            }
+        }
+        return null;
+    }
+}
+
+public class GuildInfo
+{
+    public Guild Guild;
+}
+
+public class GuildServices
+{
+    private readonly HashSet<Type> _registered = new();
+    private readonly Dictionary<ulong, Dictionary<Type, object>> _services = new();
+
+    public T Get<T>(Guild guild)
+        where T : class
+    {
+        var t = typeof(T);
+        ulong id = guild.Id;
+
+        if (!_registered.Contains(t))
+        {
+            throw new Exception("Service not implemented");
+        }
+
+        if (!_services.TryGetValue(id, out var types))
+        {
+            _services.Add(id, types = new());
+        }
+
+        T retVal;
+
+        if (!types.TryGetValue(t, out var outVal))
+        {
+            retVal = PonkoDiscord.AppHost.Services.GetService<T>();
+            if (retVal is IGuildService guildSvc)
+            {
+                guildSvc.OnCreate(guild);
+            }
+            types.Add(t, retVal);
+        }
+        else
+        {
+            retVal = (outVal as T)!;
+        }
+
+        return retVal!;
+    }
+
+    internal void Register<TImpl>() where TImpl : class
+    {
+        _registered.Add(typeof(TImpl)); ;
+    }
+}
+
 public class PonkoDiscord
 {
-    private DiscordSocketClient _client;
-    private SocketVoiceChannel _channel;
-
-    private SocketGuild _guild;
-    private SocketVoiceChannel _voiceChannel;
-    private SocketGuildChannel _textChannel;
-
-    IGuildRepository _guildRepository;
+    public static IHost AppHost { get; private set; }
 
     public async Task Start()
     {
         Console.WriteLine("starting");
 
-        string appRoot = Directory.GetCurrentDirectory();
-        const string tokenFilename = "discordtoken.txt";
+        AppHost = SetupApp();
 
-        string tokenPath = Path.Combine(appRoot, tokenFilename);
+        AppHost.Services.GetRequiredService<PonkoDiscordHost>();
 
-        if(!File.Exists(tokenPath))
-        {
-            Console.WriteLine("sorry sir/mam, no token found!! ('discordtoken.txt' containing the discord token)");
-            Console.ReadLine();
-            return;
-        }
-        
-        var readToken = File.ReadAllTextAsync(tokenPath);
-
-        _guildRepository = new GuildRepository();
-
-        var cfg = new DiscordSocketConfig
-        {
-            GatewayIntents = GatewayIntents.AllUnprivileged | GatewayIntents.MessageContent,
-            //LogLevel = LogSeverity.Debug,
-        };
-
-        _client = new DiscordSocketClient(cfg);
-
-        _client.Log += Client_Log;
-        _client.UserVoiceStateUpdated += ClientOnUserVoiceStateUpdated;
-        _client.JoinedGuild += ClientOnJoinedGuild;
-        _client.MessageReceived += Client_MessageReceived;
-        _client.LoggedIn += Client_LoggedIn;
-        _client.Connected += Client_Connected;
-        _client.Ready += Client_Ready;
-
-        //string audioStreamUrl = await _yt.GetAudioStreamUrl("nA7ZI34_3tg");
-        //_player.SetAudioStream(audioStreamUrl);
-
-        await Console.Out.WriteLineAsync("logging in... connecting... readying...");
-        await _client.LoginAsync(TokenType.Bot, await readToken);
-        await _client.StartAsync();
-
-
-        ulong gjengen = 225548816747724810;
-        ulong becania = 214099882133159938;
-        ulong ponker = 748320103392608327;
-
-        //var guild = _client.GetGuild(becania);
-        //await SetGuild(guild);
-
+        await AppHost.RunAsync();
         await Task.Delay(-1);
-
-        await _client.LogoutAsync();
-        await Console.Out.WriteLineAsync("logged out, bye");
-        await Task.Delay(2000);
     }
 
-    private async Task Client_Ready()
+    private IHost SetupApp(HostApplicationBuilder builder = null!)
     {
-        await Console.Out.WriteLineAsync("ready!");
-        var guildSockets = new List<Guild>();
-        foreach (var guildSocket in _client.Guilds)
+        builder ??= Host.CreateApplicationBuilder();
+
+        ConfigureServices(builder.Services);
+
+        var app = builder.Build();
+
+        return app;
+    }
+
+    private void ConfigureServices(IServiceCollection services)
+    {
+        //  main
+        services.AddSingleton<PonkoDiscordHost>();
+        services.AddSingleton<IDiscordTokenStore, DiscordTokenStore>();
+
+        //  util
+        services.AddTransient<ILogger, DefaultLogger>();
+
+        // misc
+        services.AddTransient<IGuildPlaylistRepository, GuildPlaylist>();
+
+        //  commands
+        services.AddSingleton<CommandHandler>();
+        services.AddTransient<ICommandProvider, CommandProvider>();
+        services.AddCommands();
+
+        //  audio
+        services.AddSingleton<IAudioClientManager, AudioClientManager>();
+        services.AddSingleton<AudioManager>();
+        services.AddSingleton<PonkoStreamPlayer>();
+
+        //  chat
+        services.AddTransient<IChatter, Chatter>();
+
+        //  music
+        services.AddSingleton<MusicManager>();
+        services.AddSingleton<MediaPlaylist<Song>>();
+        services.AddSingleton<SongStore>();
+        services.AddSingleton<IMediaSongStore<Song>, SongStore>(p => p.GetRequiredService<SongStore>());
+        services.AddSingleton<PonkoYT>();
+        services.AddSingleton<IPonkoMusicFinder, PonkoMusicFinder>();
+    }
+}
+
+public static class DiscordServiceExtensions
+{
+    public static IServiceCollection AddCommands(this IServiceCollection services)
+    {
+        var commandIfc = typeof(IChatCommand);
+        var assembly = Assembly.GetExecutingAssembly();
+
+        var implClasses = assembly.GetTypes()
+            .Where(x => commandIfc.IsAssignableFrom(x) && !x.IsInterface && !x.IsAbstract);
+
+        foreach (var chatCommand in implClasses)
         {
-            //if (guildSocket.Id == 748320103392608327)
-            guildSockets.Add(new Guild(guildSocket));
+            services.AddTransient(chatCommand);
         }
 
-        _guildRepository.InitGuilds(guildSockets);
+        Console.WriteLine($"registered '{implClasses.Count()}' chat commands");
+
+        return services;
     }
 
-    private async Task Client_Connected()
+    public static IChatCommand GetCommand<T>(this IServiceProvider provider, Guild guild, string query)
     {
-        await Console.Out.WriteLineAsync("connected!");
+        return PonkoDiscordHost._commandFactory.GetCommand(guild, query);
     }
 
-    private async Task Client_LoggedIn()
+    public static T GetGuildService<T>(this IServiceProvider provider, Guild guild)
+        where T : class
     {
-        await Console.Out.WriteLineAsync("logged in!");
+        return PonkoDiscordHost._guildServices.Get<T>(guild);
     }
 
-    private void AddStack(Func<Task> action)
+    public static IServiceCollection AddGuildService<TImpl>(this IServiceCollection services)
+        where TImpl : class
     {
-        var th = new Thread(() => action());
-        th.IsBackground = true;
-        th.Start();
-    }
-    private async Task ClientOnJoinedGuild(SocketGuild guild)
-    {
-        _guildRepository.Add(new Guild(guild));
+        PonkoDiscordHost._guildServices.Register<TImpl>();
+        services.AddTransient<TImpl>();
+        services.AddTransient<GuildService<TImpl>>();
+        return services;
     }
 
-    private async Task ClientOnUserVoiceStateUpdated(SocketUser arg1, SocketVoiceState oldState, SocketVoiceState state)
+    public static IServiceCollection AddGuildService<TService, TImpl>(this IServiceCollection services)
+        where TService : class
+        where TImpl : class, TService
     {
-        if (oldState.VoiceChannel != null && state.VoiceChannel != null)
-        {
-            var guild = state.VoiceChannel.Guild;
-        }
+        PonkoDiscordHost._guildServices.Register<TImpl>();
+        services.AddTransient<TService, TImpl>();
+        services.AddTransient<GuildService<TImpl>>();
+        return services;
     }
 
-    private async Task Client_MessageReceived(SocketMessage msg)
+    public static IServiceCollection AddCommand<TImpl>(this IServiceCollection services, IEnumerable<string> triggers)
+        where TImpl : class
     {
-        try
-        {
-            if (msg.Author.IsBot)
-                return;
-
-            var guildChannel = msg.Channel as SocketGuildChannel;
-            var guild = _guildRepository.Get(guildChannel.Guild.Id);
-
-            if (guild == null)
-                return;
-
-            guild.MessageReceived(msg);
-        }
-        catch (Exception e)
-        {
-            await Console.Out.WriteLineAsync(e.ToString());
-        }
+        PonkoDiscordHost._commandFactory.Register<TImpl>(triggers);
+        services.AddTransient<TImpl>();
+        return services;
     }
 
-    private async Task Client_Log(LogMessage logMsg)
+    /// <summary>
+    /// Triggers are separated with , (comma).
+    /// </summary>
+    /// <param name="triggers">Triggers are separated with , (comma).</param>
+    /// <returns></returns>
+    public static IServiceCollection AddCommand<TCommand>(this IServiceCollection services, string triggers)
+        where TCommand : class, IChatCommand
     {
-        await Console.Out.WriteLineAsync(logMsg.Message);
+        var splitTriggers = triggers.Trim().Split(',');
+        return AddCommand<TCommand>(services, splitTriggers);
     }
 }

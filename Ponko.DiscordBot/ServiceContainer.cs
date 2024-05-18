@@ -1,7 +1,7 @@
 using System.Reflection;
 using Autofac;
+using Ponko.DiscordBot.Common;
 using Ponko.DiscordBot.Contracts;
-using Ponko.DiscordBot.Services;
 
 namespace Ponko.DiscordBot;
 
@@ -11,7 +11,7 @@ public static class ServiceContainer
     {
         ContainerBuilder builder = new ContainerBuilder();
 
-        builder.RegisterType<CommandManager>().As<ICommandManager>();
+        builder.RegisterType<CommandHandler>().As<ICommandHandler>();
 
         var assembly = Assembly.GetExecutingAssembly();
 
@@ -21,7 +21,7 @@ public static class ServiceContainer
 
         var container = builder.Build();
 
-        var cm = container.Resolve<ICommandManager>();
+        var cm = container.Resolve<ICommandHandler>();
 
         return builder.Build();
     }

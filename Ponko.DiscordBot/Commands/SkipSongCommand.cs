@@ -1,41 +1,29 @@
 ﻿using Discord.WebSocket;
-using Ponko.DiscordBot.Services;
 using Ponko.MediaLib;
 using Ponko.Util;
 
 namespace Ponko.DiscordBot.Commands;
 
-public class SkipSongCommand : CommandBase
+public class SkipSongCommand : IChatCommand
 {
     private readonly MediaPlaylist<Song> _mediaPlaylist;
-    private readonly MusicManager _musicManager;
 
-    static readonly string[] skipResponses = {"skipperoni", "skipperino", "skip:P",
-    "skippser", "nexting", "go next", "TSUGI", "skippu", "Sukippu", "yebyeb", "ok.."};
+    private static readonly string[] _skipResponses = { "skipperoni", "skipperino", "skip:P",
+        "skippser", "nexting", "go next", "TSUGI", "skippu", "Sukippu", "yebyeb", "ok.." };
 
-    public SkipSongCommand(MediaPlaylist<Song> mediaPlaylist, MusicManager musicManager)
+    public Guild Guild { get; set; }
+
+    public string Triggers => "skip,skipå,skipo,skiop,skop,skpi,skjip,sikp,next";
+
+    public SkipSongCommand(MediaPlaylist<Song> mediaPlaylist)
     {
         _mediaPlaylist = mediaPlaylist;
-        _musicManager = musicManager;
-        Triggers.Add("skip");
-        Triggers.Add("skpi");
-        Triggers.Add("sikp");
-        Triggers.Add("skipo");
-        Triggers.Add("skiop");
-        Triggers.Add("skipå");
     }
 
-    public override bool CanExecute()
+    public async Task MessageReceived(SocketMessage msg, string commandName, string query)
     {
-        return true;
-    }
-
-    public override void Execute(SocketMessage msg, string commandName, string query)
-    {
-        Console.WriteLine("skipped song!!");
-
-        string responseText = skipResponses.RandomItem();
-        msg.Channel.SendMessageAsync($"### :track_next: {responseText} :track_next:");
+        string responseText = _skipResponses.RandomItem();
+        msg.Channel.SendMessageAsync($"### :musical_note: :track_next: {responseText} :track_next: :musical_note:");
         _mediaPlaylist.Next();
     }
 }

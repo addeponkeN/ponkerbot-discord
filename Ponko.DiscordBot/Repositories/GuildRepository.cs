@@ -1,12 +1,10 @@
-using Ponko.DiscordBot.Models;
-using System.Collections.Concurrent;
+using Ponko.DiscordBot.Common;
 
 namespace Ponko.DiscordBot.Repositories;
 
 public class GuildRepository : IGuildRepository
 {
     private Dictionary<ulong, Guild> _guilds = new();
-    
     public IEnumerable<Guild> Items => _guilds.Values;
     
     public void Add(Guild guild)

@@ -1,16 +1,21 @@
-﻿
-using Discord.WebSocket;
-using Ponko.DiscordBot.Models;
+﻿using Discord.WebSocket;
 
 namespace Ponko.DiscordBot.Commands;
 
-public abstract class CommandBase
+public interface ICommand
 {
-    public Guild Guild { get; set; }
-    public HashSet<string> Triggers { get; set; } = new();
+    Guild Guild { get; set; }
+    ulong GuildId => Guild.Id;
+    bool CanExecute() => true;
+}
 
-    public bool IsTriggerMatch(string command) => Triggers.Contains(command);
-    public virtual bool CanExecute() => true;
-    public abstract void Execute(SocketMessage msg, string trigger, string query);
+public interface IChatCommand : ICommand
+{
+    string Triggers { get; }
+    Task MessageReceived(SocketMessage msg, string trigger, string query);
+}
 
+public interface IReactCommand : ICommand
+{
+    void ReactReceived();
 }

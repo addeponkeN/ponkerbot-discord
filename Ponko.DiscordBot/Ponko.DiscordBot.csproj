@@ -7,17 +7,27 @@
     </PropertyGroup>
 
     <ItemGroup>
-      <PackageReference Include="Autofac" Version="7.1.0" />
-      <PackageReference Include="Discord.Net.Core" Version="3.12.0" />
-      <PackageReference Include="Discord.Net.WebSocket" Version="3.12.0" />
-      <PackageReference Include="NAudio" Version="2.1.0" />
+      <Compile Remove="Data\**" />
+      <EmbeddedResource Remove="Data\**" />
+      <None Remove="Data\**" />
     </ItemGroup>
 
     <ItemGroup>
+      <PackageReference Include="Autofac" Version="7.1.0" />
+      <PackageReference Include="Discord.Net.WebSocket" Version="3.12.0" />
+      <PackageReference Include="Microsoft.Extensions.DependencyInjection" Version="8.0.0-rc.1.23419.4" />
+      <PackageReference Include="Microsoft.Extensions.Hosting" Version="8.0.0-rc.1.23419.4" />
+      <PackageReference Include="NAudio" Version="2.2.1" />
+    </ItemGroup>
+
+    <ItemGroup>
+      <ProjectReference Include="..\..\..\_clones\Discord.Net\src\Discord.Net.Core\Discord.Net.Core.csproj" />
+      <ProjectReference Include="..\..\Ponko\Ponko.AiVoice\Ponko.AiVoice.csproj" />
       <ProjectReference Include="..\..\Ponko\Ponko.HtmlExtensions\Ponko.HtmlExtensions.csproj" />
       <ProjectReference Include="..\..\Ponko\Ponko.MediaLib\Ponko.MediaLib.csproj" />
       <ProjectReference Include="..\..\Ponko\Ponko.MusicFinder\Ponko.MusicFinder.csproj" />
       <ProjectReference Include="..\..\Ponko\Ponko.SoundCloud\Ponko.SoundCloud.csproj" />
+      <ProjectReference Include="..\..\Ponko\Ponko.Udio\Ponko.Udio.csproj" />
       <ProjectReference Include="..\..\Ponko\Ponko.Util\Ponko.Util.csproj" />
       <ProjectReference Include="..\..\Ponko\Ponko.YoutubeApi\Ponko.YoutubeApi.csproj" />
       <ProjectReference Include="..\..\Ponko\Ponko.YT\Ponko.YT.csproj" />

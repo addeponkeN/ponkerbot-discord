@@ -4,3 +4,6 @@ obj/
 .idea/
 googleapi.txt
 discordtoken.txt
+creds.txt
+/Ponko.DiscordBot.Console/build linux.bat
+/Ponko.DiscordBot.Console/Ponko.DiscordBot.Console.exe - Shortcut.lnk

@@ -1,4 +1,4 @@
-using Ponko.DiscordBot.Models;
+using Ponko.DiscordBot.Common;
 
 namespace Ponko.DiscordBot.Repositories;
 

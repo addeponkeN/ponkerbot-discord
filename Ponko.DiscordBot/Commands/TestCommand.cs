@@ -1,15 +1,15 @@
 ﻿using Discord.WebSocket;
 
-namespace Ponko.DiscordBot.Commands; 
+namespace Ponko.DiscordBot.Commands;
 
-internal class StopSongCommand : IChatCommand
+public class TestCommand : IChatCommand
 {
     public Guild Guild { get; set; }
 
-    public string Triggers => "stopperino";
+    public string Triggers => "test";
 
     public async Task MessageReceived(SocketMessage msg, string trigger, string query)
     {
-
+        Console.WriteLine("no such command !!");
     }
 }
